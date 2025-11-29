@@ -18,6 +18,10 @@ class LLMProvider(abc.ABC):
     async def extract_data(self, raw_text: str, prompt_template: str) -> List[Dict[str, Any]]:
         pass
 
+    @abc.abstractmethod
+    async def interpret_command(self, user_message: str) -> Dict[str, str] | None:
+        pass
+
 class GeminiProvider(LLMProvider):
     def __init__(self):
         api_key = os.getenv("GEMINI_API_KEY")
@@ -41,6 +45,25 @@ class GeminiProvider(LLMProvider):
         if text.endswith("```"):
             text = text[:-3]
         return json.loads(text)
+
+    async def interpret_command(self, user_message: str) -> Dict[str, str] | None:
+        from prompts import COMMAND_INTERPRETER_PROMPT
+        full_prompt = f"{COMMAND_INTERPRETER_PROMPT}\n\nUSER MESSAGE: {user_message}"
+        response = self.model.generate_content(full_prompt)
+        text = response.text.strip()
+        
+        if text.startswith("```json"):
+            text = text[7:]
+        if text.endswith("```"):
+            text = text[:-3]
+        
+        if text.lower() == "null":
+            return None
+            
+        try:
+            return json.loads(text)
+        except json.JSONDecodeError:
+            return None
 
 class LocalLLMProvider(LLMProvider):
     def __init__(self, base_url: str = "http://localhost:11434"):
@@ -78,6 +101,24 @@ class LocalLLMProvider(LLMProvider):
         except json.JSONDecodeError:
             print(f"Failed to parse JSON from Local LLM: {response_text}")
             return []
+
+    async def interpret_command(self, user_message: str) -> Dict[str, str] | None:
+        from prompts import COMMAND_INTERPRETER_PROMPT
+        full_prompt = f"{COMMAND_INTERPRETER_PROMPT}\n\nUSER MESSAGE: {user_message}\n\nRespond ONLY with the JSON object or null."
+        response_text = await self.generate_content(full_prompt)
+        
+        try:
+            start = response_text.find('{')
+            end = response_text.rfind('}') + 1
+            if start != -1 and end != -1:
+                json_str = response_text[start:end]
+                return json.loads(json_str)
+            elif "null" in response_text.lower():
+                return None
+            else:
+                return None
+        except json.JSONDecodeError:
+            return None
 
 def get_llm_provider() -> LLMProvider:
     llm_type = os.getenv("LLM_TYPE", "CLOUD").upper()

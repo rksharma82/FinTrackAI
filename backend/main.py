@@ -49,6 +49,10 @@ class ChatRequest(BaseModel):
 async def root():
     return {"message": "FinTrackAI Backend is running"}
 
+@app.get("/config")
+async def get_config():
+    return {"llm_type": os.getenv("LLM_TYPE", "CLOUD")}
+
 @app.post("/upload")
 async def upload_file(file: UploadFile = File(...)):
     content = await file.read()
@@ -92,6 +96,22 @@ async def upload_file(file: UploadFile = File(...)):
 async def chat(request: ChatRequest):
     llm = get_llm_provider()
     
+    # Check if it's a command
+    command = await llm.interpret_command(request.message)
+    
+    if command and command.get("vendor_keyword") and command.get("new_category"):
+        keyword = command["vendor_keyword"]
+        new_category = command["new_category"]
+        
+        # Execute update
+        result = await transactions_collection.update_many(
+            {"description": {"$regex": keyword, "$options": "i"}},
+            {"$set": {"category": new_category}}
+        )
+        
+        return {"response": f"Updated {result.modified_count} transactions matching '{keyword}' to category '{new_category}'."}
+    
+    # Normal Chat / RAG
     # Simple RAG: Fetch recent transactions to give context
     # In a real app, we'd do vector search or more sophisticated filtering
     cursor = transactions_collection.find().sort("_id", -1).limit(20)
@@ -104,8 +124,24 @@ async def chat(request: ChatRequest):
     return {"response": response}
 
 @app.get("/transactions")
-async def get_transactions():
-    cursor = transactions_collection.find().sort("_id", -1).limit(100)
+async def get_transactions(
+    start_date: Optional[str] = None,
+    end_date: Optional[str] = None,
+    vendor: Optional[str] = None,
+    category: Optional[str] = None
+):
+    query = {}
+    
+    if start_date:
+        query.setdefault("date", {})["$gte"] = start_date
+    if end_date:
+        query.setdefault("date", {})["$lte"] = end_date
+    if vendor:
+        query["description"] = {"$regex": vendor, "$options": "i"}
+    if category:
+        query["category"] = category
+        
+    cursor = transactions_collection.find(query).sort("date", -1).limit(100)
     txns = await cursor.to_list(length=100)
     # Convert ObjectId to str
     for txn in txns:

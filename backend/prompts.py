@@ -13,3 +13,16 @@ If the text is messy, do your best to identify transaction rows.
 Ignore header lines or footer lines that are not transactions.
 Output ONLY the valid JSON list.
 """
+
+COMMAND_INTERPRETER_PROMPT = """
+You are a command interpreter for a finance tracker.
+Analyze the user's message to see if it is a request to update transaction categories in bulk.
+
+If it IS a bulk update request (e.g., "Change Walmart to Groceries", "Update all Uber rides to Transport"), return a JSON object with:
+- "vendor_keyword": The keyword to match in the description (e.g., "Walmart", "Uber").
+- "new_category": The new category to assign (e.g., "Groceries", "Transport").
+
+If it is NOT a bulk update request (e.g., "How much did I spend?", "Hello"), return null.
+
+Output ONLY the JSON object or null.
+"""
