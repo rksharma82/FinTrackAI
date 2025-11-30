@@ -4,10 +4,7 @@ import json
 import requests
 import google.generativeai as genai
 from typing import List, Dict, Any
-from dotenv import load_dotenv
-
-# Ensure env vars are loaded even if main.py didn't do it right
-load_dotenv(os.path.join(os.path.dirname(os.path.dirname(__file__)), ".env"))
+from core.config import Config
 
 class LLMProvider(abc.ABC):
     @abc.abstractmethod
@@ -24,11 +21,11 @@ class LLMProvider(abc.ABC):
 
 class GeminiProvider(LLMProvider):
     def __init__(self):
-        api_key = os.getenv("GEMINI_API_KEY")
+        api_key = Config.get_gemini_api_key()
         if not api_key:
             raise ValueError("GEMINI_API_KEY not found in environment variables. Please check your .env file.")
         genai.configure(api_key=api_key)
-        model_name = os.getenv("GEMINI_MODEL", "gemini-1.5-flash")
+        model_name = Config.get_gemini_model()
         self.model = genai.GenerativeModel(model_name)
 
     async def generate_content(self, prompt: str) -> str:
@@ -121,7 +118,7 @@ class LocalLLMProvider(LLMProvider):
             return None
 
 def get_llm_provider() -> LLMProvider:
-    llm_type = os.getenv("LLM_TYPE", "CLOUD").upper()
+    llm_type = Config.get_llm_type()
     if llm_type == "LOCAL":
         return LocalLLMProvider()
     return GeminiProvider()

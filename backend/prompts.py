@@ -6,8 +6,11 @@ Each item in the list should have the following fields:
 - description: string (original description)
 - amount: number (positive for income, negative for expense, or just absolute value if type implies it. Prefer signed.)
 - type: string ("income" or "expense")
-- category: string (infer a category like "Food", "Transport", "Utilities", "Salary", etc.)
+- category: string (infer a category like "Food", "Transport", "Utilities", "Salary", "Transfer", etc.)
 - merchant: string (extracted merchant name)
+- account_name: string (MANDATORY: infer the account name from the text, e.g., "Chase Checking", "Amex Gold". If not explicitly stated, use "Unknown Account")
+- is_transfer: boolean (true if the transaction appears to be a transfer between accounts, e.g., "Payment to Credit Card", "Transfer to Savings", otherwise false)
+- potential_transfer: boolean (true if description contains keywords like "Transfer", "Acct", "Savings", "IRA", "Investment", "EFT", "Contribution", otherwise false)
 
 If the text is messy, do your best to identify transaction rows.
 Ignore header lines or footer lines that are not transactions.

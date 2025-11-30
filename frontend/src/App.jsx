@@ -5,6 +5,7 @@ import FileUpload from './components/FileUpload';
 import TransactionTable from './components/TransactionTable';
 import ChatInterface from './components/ChatInterface';
 import CategoryManager from './components/CategoryManager';
+import TransferReview from './components/TransferReview';
 
 // Configure axios base URL for development
 // In production, this would be handled by Nginx or similar
@@ -66,6 +67,18 @@ function App() {
     fetchTransactions();
   };
 
+  const handleClearData = async () => {
+    if (window.confirm("Are you sure you want to delete ALL transactions? This action cannot be undone.")) {
+      try {
+        await axios.delete('/transactions');
+        fetchTransactions();
+      } catch (error) {
+        console.error("Error clearing data:", error);
+        alert("Failed to clear data.");
+      }
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gray-50 text-gray-900 font-sans">
       {/* Header */}
@@ -83,6 +96,13 @@ function App() {
             <div className="px-3 py-1 bg-gray-100 rounded-full text-xs font-medium text-gray-600 border border-gray-200">
               Running on: <span className="text-blue-600">{llmMode}</span>
             </div>
+            <button
+              onClick={handleClearData}
+              className="px-3 py-1 bg-red-50 hover:bg-red-100 text-red-600 rounded-full text-xs font-medium border border-red-200 transition-colors"
+              title="Clear All Data"
+            >
+              Clear Data
+            </button>
             <button className="p-2 hover:bg-gray-100 rounded-full transition-colors">
               <Settings className="w-5 h-5 text-gray-500" />
             </button>
@@ -187,6 +207,10 @@ function App() {
 
               <div className="mt-8">
                 <CategoryManager />
+              </div>
+
+              <div className="mt-8">
+                <TransferReview />
               </div>
             </section>
           </div>
